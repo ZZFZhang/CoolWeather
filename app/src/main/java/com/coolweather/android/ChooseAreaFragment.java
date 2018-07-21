@@ -1,5 +1,6 @@
 package com.coolweather.android;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -19,8 +20,10 @@ import android.widget.Toast;
 import com.coolweather.android.database.City;
 import com.coolweather.android.database.County;
 import com.coolweather.android.database.Province;
+import com.coolweather.android.heweather_sdk.HandleData;
 import com.coolweather.android.util.HttpUtil;
 import com.coolweather.android.util.Utility;
+import com.google.gson.Gson;
 
 import org.litepal.LitePal;
 
@@ -28,6 +31,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import interfaces.heweather.com.interfacesmodule.bean.Lang;
+import interfaces.heweather.com.interfacesmodule.bean.Unit;
+import interfaces.heweather.com.interfacesmodule.bean.air.Air;
+import interfaces.heweather.com.interfacesmodule.bean.air.now.AirNow;
+import interfaces.heweather.com.interfacesmodule.bean.weather.forecast.Forecast;
+import interfaces.heweather.com.interfacesmodule.bean.weather.lifestyle.Lifestyle;
+import interfaces.heweather.com.interfacesmodule.bean.weather.now.Now;
+import interfaces.heweather.com.interfacesmodule.view.HeConfig;
+import interfaces.heweather.com.interfacesmodule.view.HeWeather;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
@@ -79,6 +91,13 @@ public class ChooseAreaFragment extends Fragment {
                 }else if (currentLevel==LEVEL_CITY){
                     selectedCity=cityList.get(position);
                     queryCounties();
+                }else if (currentLevel==LEVEL_COUNTY){
+                    selectedCounty=countyList.get(position);
+                    String weatherId=selectedCounty.getWeatherId();
+                    Intent intent=new Intent(getActivity(),WeatherActivity.class);
+                    intent.putExtra("weather_id",weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });
@@ -93,7 +112,24 @@ public class ChooseAreaFragment extends Fragment {
             }
         });
         queryProvinces();
+
+        /*HeConfig.init("HE1807171519171119","5eac2ba871ae40ed868fd7ed9ff86a7c");
+        HeConfig.switchToFreeServerNode();
+
+        HeWeather.getAirNow(MyApplication.getContext(), "北京", new HeWeather.OnResultAirNowBeansListener() {
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+
+            @Override
+            public void onSuccess(List<AirNow> list) {
+                Log.d(TAG, "onSuccess: "+list.get(0).getAir_now_city().getAqi());
+            }
+        });*/
     }
+
+    private static final String TAG = "ChooseAreaFragment";
 
     //查询显示全国所有省份，优先从数据库查询，如果没有从服务器查询
     private void queryProvinces(){

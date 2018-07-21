@@ -6,6 +6,9 @@ import android.util.Log;
 import com.coolweather.android.database.City;
 import com.coolweather.android.database.County;
 import com.coolweather.android.database.Province;
+import com.coolweather.android.heweather_sdk.HeWeather6;
+import com.google.gson.Gson;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -70,5 +73,17 @@ public class Utility {
             }
         }
         return false;
+    }
+
+    public static String HeWeatherToJson(HeWeather6 heWeather6){
+        String jsonText=new Gson().toJson(heWeather6,HeWeather6.class);
+        Log.d(TAG, "HeWeatherToJson: 1111");
+        return jsonText;
+    }
+
+    private static final String TAG = "Utility";
+
+    public static HeWeather6 JsonToHeWeather(String jsonText){
+        return new Gson().fromJson(jsonText,HeWeather6.class);
     }
 }
