@@ -34,7 +34,7 @@ public class HandleData {
     private List<LifeStyleWeather> lifeStyleWeatherList;
     private LifeStyleWeather lifeStyleWeather;
 
-    private int i=0;
+    private int i;
     private Listener listener;
     public HandleData(Listener listener){this.listener=listener;}
 
@@ -43,6 +43,7 @@ public class HandleData {
     public void UseSDK(String cid){
         HeConfig.init("HE1807171519171119","5eac2ba871ae40ed868fd7ed9ff86a7c");
         HeConfig.switchToFreeServerNode();
+        i=0;
 
         final SharedPreferences.Editor editor=PreferenceManager.getDefaultSharedPreferences(MyApplication.getContext()).edit();
         HeWeather.getWeatherNow(MyApplication.getContext(), cid, Lang.CHINESE_SIMPLIFIED, Unit.METRIC,new HeWeather.OnResultWeatherNowBeanListener() {
@@ -77,7 +78,13 @@ public class HandleData {
         HeWeather.getAirNow(MyApplication.getContext(), cid, new HeWeather.OnResultAirNowBeansListener() {
             @Override
             public void onError(Throwable throwable) {
-
+                aqiWeather=new AQIWeather();
+                aqiWeather.setAqi("0");
+                aqiWeather.setPm25("0");
+                editor.putString("aqi_weather",new Gson().toJson(aqiWeather));
+                editor.apply();
+                listener.updateSuccess(++i);
+                Log.d(TAG, "onError: getAirNow"+throwable);
             }
 
             @Override

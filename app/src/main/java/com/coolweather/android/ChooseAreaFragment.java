@@ -1,7 +1,9 @@
 package com.coolweather.android;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -21,7 +23,9 @@ import com.coolweather.android.database.City;
 import com.coolweather.android.database.County;
 import com.coolweather.android.database.Province;
 import com.coolweather.android.heweather_sdk.HandleData;
+import com.coolweather.android.heweather_sdk.HeWeather6;
 import com.coolweather.android.util.HttpUtil;
+import com.coolweather.android.util.Listener;
 import com.coolweather.android.util.Utility;
 import com.google.gson.Gson;
 
@@ -93,11 +97,23 @@ public class ChooseAreaFragment extends Fragment {
                     queryCounties();
                 }else if (currentLevel==LEVEL_COUNTY){
                     selectedCounty=countyList.get(position);
-                    String weatherId=selectedCounty.getWeatherId();
-                    Intent intent=new Intent(getActivity(),WeatherActivity.class);
-                    intent.putExtra("weather_id",weatherId);
-                    startActivity(intent);
-                    getActivity().finish();
+                    final String weatherId=selectedCounty.getWeatherId();
+                    if (getActivity() instanceof MainActivity){
+                        Intent intent=new Intent(getActivity(),WeatherActivity.class);
+                        intent.putExtra("weather_id",weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    }else if (getActivity() instanceof WeatherActivity){
+                        final WeatherActivity activity=(WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefresh.setRefreshing(true);
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                activity.handleData.UseSDK(weatherId);
+                            }
+                        }).start();
+                    }
                 }
             }
         });
@@ -112,21 +128,6 @@ public class ChooseAreaFragment extends Fragment {
             }
         });
         queryProvinces();
-
-        /*HeConfig.init("HE1807171519171119","5eac2ba871ae40ed868fd7ed9ff86a7c");
-        HeConfig.switchToFreeServerNode();
-
-        HeWeather.getAirNow(MyApplication.getContext(), "北京", new HeWeather.OnResultAirNowBeansListener() {
-            @Override
-            public void onError(Throwable throwable) {
-
-            }
-
-            @Override
-            public void onSuccess(List<AirNow> list) {
-                Log.d(TAG, "onSuccess: "+list.get(0).getAir_now_city().getAqi());
-            }
-        });*/
     }
 
     private static final String TAG = "ChooseAreaFragment";
