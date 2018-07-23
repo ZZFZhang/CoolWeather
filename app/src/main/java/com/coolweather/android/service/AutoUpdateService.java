@@ -50,12 +50,16 @@ public class AutoUpdateService extends Service {
     private static final String TAG = "AutoUpdateService";
 
     private void updateWeather(){
-        SharedPreferences preferences= PreferenceManager.getDefaultSharedPreferences(MyApplication.getContext());
-        String weatherText=preferences.getString("heweather",null);
-        HeWeather6 heWeather6=new HeWeather6();
-        heWeather6=new Gson().fromJson(weatherText,HeWeather6.class);
-        String weatherId=heWeather6.getBasicWeather().weatherId;
-        WeatherActivity.handleData.UseSDK(weatherId);
+        try{
+            SharedPreferences preferences= PreferenceManager.getDefaultSharedPreferences(MyApplication.getContext());
+            String weatherText=preferences.getString("heweather",null);
+            HeWeather6 heWeather6=new HeWeather6();
+            heWeather6=new Gson().fromJson(weatherText,HeWeather6.class);
+            String weatherId=heWeather6.getBasicWeather().weatherId;
+            WeatherActivity.handleData.UseSDK(weatherId);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
     private void updateBingPic(){

@@ -1,7 +1,5 @@
 package com.coolweather.android.heweather_sdk;
 
-import com.coolweather.android.gson.Forecast;
-
 import java.util.List;
 
 public class HeWeather6 {

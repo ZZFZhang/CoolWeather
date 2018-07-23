@@ -107,9 +107,9 @@ public class HandleData {
 
             @Override
             public void onSuccess(List<Forecast> list) {
-                forecastWeatherList=new ArrayList<>(3);
+                forecastWeatherList=new ArrayList<>();
                 forecastWeatherList.clear();
-                for (int i=0;i<3;i++){
+                for (int i=0;i<list.get(0).getDaily_forecast().size();i++){
                     forecastWeather=new ForecastWeather();
                     forecastWeather.setDate(list.get(0).getDaily_forecast().get(i).getDate());
                     forecastWeather.setCond_txt_d(list.get(0).getDaily_forecast().get(i).getCond_txt_d());

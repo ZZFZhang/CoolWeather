@@ -169,10 +169,6 @@ public class WeatherActivity extends AppCompatActivity {
                 drawerLayout.openDrawer(GravityCompat.START);
             }
         });
-
-        //启动自动更新服务
-        Intent intent=new Intent(this, AutoUpdateService.class);
-        startService(intent);
     }
 
     private static final String TAG = "WeatherActivity";
