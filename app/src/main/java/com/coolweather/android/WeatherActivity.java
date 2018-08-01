@@ -1,11 +1,17 @@
 package com.coolweather.android;
 
+import android.arch.lifecycle.Lifecycle;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.GravityCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -21,6 +27,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.coolweather.android.database.Weather;
 import com.coolweather.android.heweather_sdk.AQIWeather;
 import com.coolweather.android.heweather_sdk.BasicWeather;
 import com.coolweather.android.heweather_sdk.ForecastWeather;
@@ -34,6 +41,9 @@ import com.coolweather.android.util.Listener;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.greenrobot.eventbus.EventBus;
+import org.litepal.LitePal;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,18 +55,9 @@ import okhttp3.Response;
 public class WeatherActivity extends AppCompatActivity {
 
     private ImageView bingPicImg;
-    private ScrollView scrollView;
-    private TextView titleCity;
-    private TextView titleUpdateTime;
-    private TextView degreeText;
-    private TextView weatherInfoText;
-    private LinearLayout forecastLayout;
-    private TextView aqiText;
-    private TextView pm25Text;
-    private TextView comfortText;
-    private TextView carWashText;
-    private TextView sportText;
-    public SwipeRefreshLayout swipeRefresh;
+    public DrawerLayout drawerLayout;
+    public ViewPager viewPager;
+    private FloatingActionButton floatingActionButton;
 
     public static HandleData handleData;
     private HeWeather6 heWeather6;
@@ -65,22 +66,20 @@ public class WeatherActivity extends AppCompatActivity {
     private AQIWeather aqiWeather;
     private List<ForecastWeather> forecastWeatherList;
     private List<LifeStyleWeather> lifeStyleWeatherList;
-    private String weatherText;
     private String weatherId;
 
-    public DrawerLayout drawerLayout;
-    private Button navButton;
+    private List<Weather> weatherList;
+    private int pageId;
 
     public Listener listener=new Listener() {
         @Override
         public void updateSuccess(int i) {
             if (i==4){
                 generateHeWeather6();
-                SharedPreferences preferences=PreferenceManager.getDefaultSharedPreferences(MyApplication.getContext());
-                weatherText=preferences.getString("heweather",null);
-                heWeather6=new Gson().fromJson(weatherText,HeWeather6.class);
-                showWeatherInfo(heWeather6);
-                swipeRefresh.setRefreshing(false);
+                Intent intent=new Intent(WeatherActivity.this,WeatherActivity.class);
+                startActivity(intent);
+                overridePendingTransition(0,0);//取消跳转动画
+                finish();
             }
         }
     };
@@ -98,24 +97,9 @@ public class WeatherActivity extends AppCompatActivity {
         setContentView(R.layout.activity_weather);
 
         bingPicImg=(ImageView) findViewById(R.id.bing_pic_img);
-        scrollView=(ScrollView) findViewById(R.id.weather_layout);
-        titleCity=(TextView) findViewById(R.id.title_city_name);
-        titleUpdateTime=(TextView) findViewById(R.id.title_update_time);
-        degreeText=(TextView) findViewById(R.id.degree_text);
-        weatherInfoText=(TextView) findViewById(R.id.weather_info_text);
-        forecastLayout=(LinearLayout) findViewById(R.id.forecast_item);
-        aqiText=(TextView) findViewById(R.id.aqi_text);
-        pm25Text=(TextView) findViewById(R.id.pm25_text);
-        comfortText=(TextView) findViewById(R.id.comfort_text);
-        carWashText=(TextView) findViewById(R.id.car_wash_text);
-        sportText=(TextView) findViewById(R.id.sport_text);
-        swipeRefresh=(SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
-        swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
         drawerLayout=(DrawerLayout) findViewById(R.id.drawer_layout);
-        navButton=(Button) findViewById(R.id.nav_button);
-
-        handleData=new HandleData(listener);
-        heWeather6=new HeWeather6();
+        viewPager=(ViewPager) findViewById(R.id.view_pager);
+        floatingActionButton=(FloatingActionButton) findViewById(R.id.fab);
 
         SharedPreferences preferences= PreferenceManager.getDefaultSharedPreferences(MyApplication.getContext());
         String bingPicUrl=preferences.getString("bing_pic",null);
@@ -126,53 +110,19 @@ public class WeatherActivity extends AppCompatActivity {
             loadBingPic();
         }
 
-        weatherText=preferences.getString("heweather",null);
-        Log.d(TAG, "onCreate: "+weatherText);
-        if (weatherText!=null){//有缓存数据
-            heWeather6=new Gson().fromJson(weatherText,HeWeather6.class);
-            weatherId=heWeather6.getBasicWeather().weatherId;
-            showWeatherInfo(heWeather6);
-        }else{//无缓存数据，重新获取数据
-            scrollView.setVisibility(View.INVISIBLE);
-            weatherId=getIntent().getStringExtra("weather_id");
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    handleData.UseSDK(weatherId);
-                }
-            }).start();
-        }
+        initViewPager();
 
-        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                weatherId=heWeather6.getBasicWeather().weatherId;
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        handleData.UseSDK(weatherId);
-                        loadBingPic();
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                swipeRefresh.setRefreshing(false);
-                            }
-                        });
-                    }
-                }).start();
-            }
-        });
-
-        navButton.setOnClickListener(new View.OnClickListener() {
+        floatingActionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                drawerLayout.openDrawer(GravityCompat.START);
+                Intent intent=new Intent(WeatherActivity.this,AddCityActivity.class);
+                startActivity(intent);
+                finish();
             }
         });
     }
 
     private static final String TAG = "WeatherActivity";
-
 
     public void loadBingPic(){
         String requestBingPic="http://guolin.tech/api/bing_pic";
@@ -197,60 +147,55 @@ public class WeatherActivity extends AppCompatActivity {
             }
         });
     }
-    public void showWeatherInfo(HeWeather6 heWeather6){
-        String cityName=heWeather6.getBasicWeather().location;
-        String updateTime=heWeather6.getBasicWeather().updateTime;
-        String degree=heWeather6.getNowWeather().getTemperature()+"℃";
-        String condText=heWeather6.getNowWeather().getCond_txt();
 
-        titleCity.setText(cityName);
-        titleUpdateTime.setText(updateTime);
-        degreeText.setText(degree);
-        weatherInfoText.setText(condText);
-
-        forecastLayout.removeAllViews();
-        for (ForecastWeather forecastWeather:heWeather6.getForecastList()){
-            View view= LayoutInflater.from(this).inflate(R.layout.forecast_item,forecastLayout,false);
-            TextView dateText=(TextView) view.findViewById(R.id.date_text);
-            TextView infoText=(TextView) view.findViewById(R.id.info);
-            TextView maxText=(TextView) view.findViewById(R.id.max_tmp);
-            TextView minText=(TextView) view.findViewById(R.id.min_tmp);
-
-            String date=forecastWeather.date;
-            String cond_txt_d=forecastWeather.cond_txt_d;
-            String tmp_max=forecastWeather.tmp_max;
-            String tmp_min=forecastWeather.tmp_min;
-
-            dateText.setText(date);
-            infoText.setText(cond_txt_d);
-            maxText.setText(tmp_max);
-            minText.setText(tmp_min);
-
-            forecastLayout.addView(view);
-        }
-
-        if (heWeather6.getAqiWeather()!=null){
-            aqiText.setText(heWeather6.getAqiWeather().aqi);
-            pm25Text.setText(heWeather6.getAqiWeather().pm25);
-        }
-
-        for (LifeStyleWeather lifeStyleWeather:heWeather6.getLifeStyleWeatherList()){
-            if (lifeStyleWeather.type.equals("comf")){
-                String comfort="舒适度："+lifeStyleWeather.brf+"\n"+lifeStyleWeather.txt;
-                comfortText.setText(comfort);
+    private void initViewPager(){
+        handleData=new HandleData(listener);
+        heWeather6=new HeWeather6();
+        List<Fragment> fragmentList=new ArrayList<>();
+        weatherList=LitePal.findAll(Weather.class);
+        if(weatherList.size()==0){
+            weatherId=getIntent().getStringExtra("weather_id");
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    handleData.UseSDK(weatherId);
+                }
+            }).start();
+        }else {
+            for (Weather weather:weatherList){
+                WeatherFragment weatherFragment=new WeatherFragment();
+                Bundle bundle=new Bundle();
+                bundle.putString("weather_text",weather.getWeatherText());
+                Log.d(TAG, "initViewPager: "+weather.getWeatherText());
+                weatherFragment.setArguments(bundle);
+                fragmentList.add(weatherFragment);
             }
-            if (lifeStyleWeather.type.equals("cw")){
-                String carWash="洗车指数："+lifeStyleWeather.brf+"\n"+lifeStyleWeather.txt;
-                carWashText.setText(carWash);
-            }
-            if (lifeStyleWeather.type.equals("sport")){
-                String sport="运动指数："+lifeStyleWeather.brf+"\n"+lifeStyleWeather.txt;
-                sportText.setText(sport);
-            }
+            viewPager.setOffscreenPageLimit(weatherList.size());
         }
-        scrollView.setVisibility(View.VISIBLE);
+        MyFragmentPagerAdapter myFragmentPagerAdapter=new MyFragmentPagerAdapter(getSupportFragmentManager(),fragmentList);
+        myFragmentPagerAdapter.notifyDataSetChanged();
+        viewPager.setAdapter(myFragmentPagerAdapter);
+        viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
 
-        swipeRefresh.setRefreshing(false);
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                pageId=position;
+                SharedPreferences.Editor editor=PreferenceManager.getDefaultSharedPreferences(getBaseContext()).edit();
+                editor.putInt("page_id",pageId);
+                editor.apply();
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+
+            }
+        });
+        SharedPreferences preferences=PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+        viewPager.setCurrentItem(preferences.getInt("page_id",0));
     }
 
     private void generateHeWeather6(){
@@ -282,18 +227,16 @@ public class WeatherActivity extends AppCompatActivity {
         heWeather6.setStatus("ok");
         heWeather6Text=new Gson().toJson(heWeather6);
 
-        SharedPreferences.Editor editor=PreferenceManager.getDefaultSharedPreferences(getBaseContext()).edit();
-        editor.putString("heweather",heWeather6Text);
-        editor.apply();
-    }
-
-    public void switchCity(final String cid){
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handleData.UseSDK(cid);
-                loadBingPic();
-            }
-        }).start();
+        if(weatherList.size()==0){
+            Weather weather=new Weather();
+            weather.setWeatherId(heWeather6.getBasicWeather().weatherId);
+            weather.setWeatherText(heWeather6Text);
+            weather.save();
+        }else {
+            Weather weather=new Weather();
+            weather.setWeatherId(heWeather6.getBasicWeather().weatherId);
+            weather.setWeatherText(heWeather6Text);
+            weather.updateAll("weatherId=?",weatherList.get(pageId).getWeatherId());
+        }
     }
 }

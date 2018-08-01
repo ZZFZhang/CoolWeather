@@ -106,11 +106,20 @@ public class ChooseAreaFragment extends Fragment {
                     }else if (getActivity() instanceof WeatherActivity){
                         final WeatherActivity activity=(WeatherActivity) getActivity();
                         activity.drawerLayout.closeDrawers();
-                        activity.swipeRefresh.setRefreshing(true);
+                        WeatherFragment.swipeRefresh.setRefreshing(true);
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
                                 activity.handleData.UseSDK(weatherId);
+                            }
+                        }).start();
+                    }else if (getActivity() instanceof AddCityActivity){
+                        final AddCityActivity addCityActivity=(AddCityActivity) getActivity();
+                        addCityActivity.drawerLayout.closeDrawers();
+                        new  Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                addCityActivity.handleData.UseSDK(weatherId);
                             }
                         }).start();
                     }

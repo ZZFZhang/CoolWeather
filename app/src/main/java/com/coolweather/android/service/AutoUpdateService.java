@@ -12,11 +12,14 @@ import android.util.Log;
 
 import com.coolweather.android.MyApplication;
 import com.coolweather.android.WeatherActivity;
+import com.coolweather.android.database.Weather;
 import com.coolweather.android.heweather_sdk.HandleData;
 import com.coolweather.android.heweather_sdk.HeWeather6;
 import com.coolweather.android.util.HttpUtil;
 import com.coolweather.android.util.Listener;
 import com.google.gson.Gson;
+
+import org.litepal.LitePal;
 
 import java.io.IOException;
 
@@ -36,8 +39,8 @@ public class AutoUpdateService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        updateWeather();
-        updateBingPic();
+        /*updateWeather();
+        updateBingPic();*/
         AlarmManager manager=(AlarmManager) getSystemService(ALARM_SERVICE);
         long triggerAtTime= SystemClock.elapsedRealtime()+8*60*60*1000;//定时8小时
         Intent i=new Intent(this,AutoUpdateService.class);
@@ -51,8 +54,8 @@ public class AutoUpdateService extends Service {
 
     private void updateWeather(){
         try{
-            SharedPreferences preferences= PreferenceManager.getDefaultSharedPreferences(MyApplication.getContext());
-            String weatherText=preferences.getString("heweather",null);
+            Weather weather= LitePal.find(Weather.class,1);
+            String weatherText=weather.getWeatherText();
             HeWeather6 heWeather6=new HeWeather6();
             heWeather6=new Gson().fromJson(weatherText,HeWeather6.class);
             String weatherId=heWeather6.getBasicWeather().weatherId;
